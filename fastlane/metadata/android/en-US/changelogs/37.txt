@@ -1,0 +1,3 @@
+Layout: Switch position of auto and keyboard buttons
+Fix for Samsung One UI app drawer search box microphone
+**Try Whisper+ (also on F-Droid)**

@@ -5,7 +5,9 @@ import static com.whispertflite.MainActivity.ENGLISH_ONLY_VOCAB_FILE;
 import static com.whispertflite.MainActivity.MULTILINGUAL_VOCAB_FILE;
 import static com.whispertflite.MainActivity.MULTI_LINGUAL_TOP_WORLD_SLOW;
 import static com.whispertflite.MainActivity.ENGLISH_ONLY_MODEL_EXTENSION;
-
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
+import android.view.ViewGroup;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
@@ -23,8 +25,8 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ImageButton;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import androidx.core.content.ContextCompat;
@@ -58,7 +60,7 @@ public class WhisperInputMethodService extends InputMethodService {
     private CountDownTimer countDownTimer;
     private static boolean translate = false;
     private boolean modeAuto = false;
-    private LinearLayout layoutButtons;
+    private RelativeLayout layoutButtons;
 
     @Override
     public void onCreate() {
@@ -113,6 +115,17 @@ public class WhisperInputMethodService extends InputMethodService {
     public View onCreateInputView() {  //runs before onStartInputView
         sp = PreferenceManager.getDefaultSharedPreferences(this);
         View view = getLayoutInflater().inflate(R.layout.voice_service, null);
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
+            androidx.core.graphics.Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) v.getLayoutParams();
+            mlp.leftMargin = insets.left;
+            mlp.bottomMargin = insets.bottom;
+            mlp.rightMargin = insets.right;
+            v.setLayoutParams(mlp);
+
+            return WindowInsetsCompat.CONSUMED;
+        });
+
         btnRecord = view.findViewById(R.id.btnRecord);
         btnKeyboard = view.findViewById(R.id.btnKeyboard);
         btnTranslate = view.findViewById(R.id.btnTranslate);

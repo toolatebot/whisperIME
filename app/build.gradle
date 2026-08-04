@@ -15,8 +15,8 @@ android {
         applicationId "org.woheller69.whisper"
         minSdk 28
         targetSdk 35
-        versionCode 36
-        versionName "3.6"
+        versionCode 37
+        versionName "3.7"
 
     }
 
@@ -62,9 +62,12 @@ dependencies {
 
     // Main TensorFlow Lite library
     //noinspection GradleDependency: Crash with 2.16.1, nonsense output with com.google.ai.edge.litert:litert:1.0.1
+    //implementation 'com.google.ai.edge.litert:litert:1.2.0' works, but extremely slow 30s instead of 8s, supports 16kB
+    //implementation 'com.google.ai.edge.litert:litert:1.2.0'
+    //implementation 'com.google.ai.edge.litert:litert-support:1.2.0'
     implementation 'org.tensorflow:tensorflow-lite:2.15.0'
     implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
-    implementation 'com.github.gkonovalov.android-vad:webrtc:2.0.9'
+    implementation 'com.github.gkonovalov.android-vad:webrtc:2.0.10'
     implementation 'com.github.houbb:opencc4j:1.8.1'
     implementation 'com.github.woheller69:FreeDroidWarn:+'
 }

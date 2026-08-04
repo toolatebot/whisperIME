@@ -7,6 +7,8 @@ import static com.whispertflite.MainActivity.MULTILINGUAL_VOCAB_FILE;
 import static com.whispertflite.MainActivity.MULTI_LINGUAL_TOP_WORLD_SLOW;
 
 import android.annotation.SuppressLint;
+import android.app.PendingIntent;
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -231,6 +233,62 @@ public class WhisperRecognizeActivity extends AppCompatActivity {
         sendResultIntent.putStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS, results);
         sendResultIntent.putExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES, new float[]{1.0f});
         setResult(RESULT_OK, sendResultIntent);
+
+        PendingIntent pendingIntent = null;
+        try {
+            pendingIntent = getIntent().getParcelableExtra(RecognizerIntent.EXTRA_RESULTS_PENDINGINTENT);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to get EXTRA_RESULTS_PENDINGINTENT", e);
+        }
+
+        if (pendingIntent != null) {
+            Intent pendingResultIntent = new Intent();
+            pendingResultIntent.putStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS, results);
+            pendingResultIntent.putExtra(RecognizerIntent.EXTRA_CONFIDENCE_SCORES, new float[]{1.0f});
+            pendingResultIntent.putExtra(SearchManager.QUERY, result);
+
+            if (getIntent().hasExtra(RecognizerIntent.EXTRA_RESULTS_PENDINGINTENT_BUNDLE)) {
+                Bundle pendingIntentBundle = null;
+                try {
+                    pendingIntentBundle = getIntent().getParcelableExtra(RecognizerIntent.EXTRA_RESULTS_PENDINGINTENT_BUNDLE);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to get EXTRA_RESULTS_PENDINGINTENT_BUNDLE", e);
+                }
+                if (pendingIntentBundle == null) {
+                    pendingIntentBundle = new Bundle();
+                }
+                pendingIntentBundle.putStringArrayList(RecognizerIntent.EXTRA_RESULTS, results);
+                pendingIntentBundle.putFloatArray(RecognizerIntent.EXTRA_CONFIDENCE_SCORES, new float[]{1.0f});
+                pendingIntentBundle.putString(SearchManager.QUERY, result);
+
+                pendingResultIntent.putExtra(RecognizerIntent.EXTRA_RESULTS_PENDINGINTENT_BUNDLE, pendingIntentBundle);
+            }
+
+            try {
+                pendingIntent.send(this, RESULT_OK, pendingResultIntent);
+            } catch (PendingIntent.CanceledException e) {
+                Log.e(TAG, "PendingIntent cancelled", e);
+            }
+        } else if (getCallingActivity() == null) {
+            String action = getIntent().getAction();
+            if (RecognizerIntent.ACTION_WEB_SEARCH.equals(action)) {
+                Intent webSearchIntent = new Intent(Intent.ACTION_WEB_SEARCH);
+                webSearchIntent.putExtra(SearchManager.QUERY, result);
+                webSearchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                try {
+                    startActivity(webSearchIntent);
+                } catch (Exception e) {
+                    Log.e(TAG, "Failed to start web search intent", e);
+                }
+            } else {
+                android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("Whisper result", result);
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(this, R.string.copy_to_clipboard, Toast.LENGTH_SHORT).show();
+                }
+            }
+        }
         finish();
     }
 
