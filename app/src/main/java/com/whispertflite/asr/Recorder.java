@@ -20,6 +20,7 @@ import com.whispertflite.R;
 
 import java.io.ByteArrayOutputStream;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -44,7 +45,8 @@ public class Recorder {
     private RecorderListener mListener;
     private final Lock lock = new ReentrantLock();
     private final Condition hasTask = lock.newCondition();
-    private final Object fileSavedLock = new Object(); // Lock object for wait/notify
+    // Used by stop() to wait until recordAudio() finishes and notifies here
+    private final Object fileSavedLock = new Object();
 
     private volatile boolean shouldStartRecording = false;
     private boolean useVAD = false;
@@ -181,19 +183,19 @@ public class Recorder {
         // Calculate maximum byte counts for 30 seconds (for saving)
         int bytesForThirtySeconds = sampleRateInHz * bytesPerSample * channels * 30;
 
-        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream(); // Buffer for saving data RecordBuffer
+        ByteArrayOutputStream outputBuffer = new ByteArrayOutputStream(); // Output buffer; truncated to 30s before passing to RecordBuffer
 
         byte[] audioData = new byte[bufferSize];
         int totalBytesRead = 0;
 
         boolean isSpeech;
         boolean isRecording = false;
-        byte[] vadAudioBuffer = new byte[VAD_FRAME_SIZE * 2];  //VAD needs 16 bit
+        byte[] vadAudioBuffer = new byte[VAD_FRAME_SIZE * 2];  // One frame at 16-bit (480 samples × 2 bytes)
 
-        while (mInProgress.get() && totalBytesRead < bytesForThirtySeconds) {
+        while (mInProgress.get() && totalBytesRead < bytesForThirtySeconds) { // Save all bytes read up to 30 seconds
             int bytesRead = audioRecord.read(audioData, 0, VAD_FRAME_SIZE * 2);
             if (bytesRead > 0) {
-                outputBuffer.write(audioData, 0, bytesRead);  // Save all bytes read up to 30 seconds
+                outputBuffer.write(audioData, 0, bytesRead);
                 totalBytesRead += bytesRead;
             } else {
                 Log.d(TAG, "AudioRecord error, bytes read: " + bytesRead);
@@ -239,7 +241,11 @@ public class Recorder {
         audioManager.setBluetoothScoOn(false);
 
         // Save recorded audio data to BufferStore (up to 30 seconds)
-        RecordBuffer.setOutputBuffer(outputBuffer.toByteArray());
+        byte[] data = outputBuffer.toByteArray();
+        RecordBuffer.setOutputBuffer(
+                Arrays.copyOf(data, Math.min(data.length, bytesForThirtySeconds))
+        );
+
         if (totalBytesRead > 6400){  //min 0.2s
             sendUpdate(MSG_RECORDING_DONE);
         } else {
